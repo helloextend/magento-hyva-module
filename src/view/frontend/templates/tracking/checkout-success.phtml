@@ -1,0 +1,43 @@
+<?php
+/**
+ * Hyva Extend Warranty - Checkout Success page tracking
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Hyva_ExtendWarranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+
+use Magento\Framework\Escaper;
+use Extend\Warranty\Block\Tracking;
+
+/** @var Escaper $escaper */
+/** @var Tracking $block */
+?>
+
+<?php if ($block->getTrackingEnabled()): ?>
+    <?php $cartTotal = $block->getCartTotal(); ?>
+    <script>
+        function initCheckoutSuccessTracking() {
+            return {
+                init: function () {
+                    if (!window.Extend) {
+                        window.addEventListener('extend-sdk-ready', () => this.trackOrderSuccess(), { once: true });
+                    } else {
+                        this.trackOrderSuccess();
+                    }
+                },
+
+                trackOrderSuccess: function () {
+                    const trackEvent = new CustomEvent('extend:trackOrderSuccess', {
+                        detail: {
+                            cartTotal: <?= $escaper->escapeJs($cartTotal) ?>
+                        }
+                    });
+                    window.dispatchEvent(trackEvent);
+                }
+            }
+        }
+    </script>
+    <div x-data="initCheckoutSuccessTracking()" x-init="init()"></div>
+<?php endif; ?>

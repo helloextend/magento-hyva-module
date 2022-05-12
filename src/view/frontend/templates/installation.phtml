@@ -1,0 +1,41 @@
+<?php
+/**
+ * Extend Warranty
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Extend_Warranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/** @var Escaper $escaper */
+/** @var Template $block */
+
+/** @var \Extend\Warranty\ViewModel\Installation $viewModel */
+$viewModel = $block->getData('viewModel');
+?>
+<?php if ($viewModel->isExtendEnabled()): ?>
+    <?php $jsonConfig = $viewModel->getJsonConfig(); ?>
+    <?php if ($jsonConfig): ?>
+        <script>
+            (function () {
+                const sdkScript = document.createElement('script')
+                sdkScript.src = '<?= $escaper->escapeUrl($viewModel->getJsMode()) ?>';
+
+                sdkScript.addEventListener('load', () => {
+                    // set ExtendSdk config
+                    Extend.config(<?= /* @noEscape */ $jsonConfig ?>);
+                    window.Extend = Extend;
+
+                    window.dispatchEvent(new CustomEvent('extend-sdk-ready'));
+                });
+                document.head.append(sdkScript);
+            })();
+        </script>
+
+        <?= $block->getChildHtml('extend.warranty.tracking.js'); ?>
+    <?php endif; ?>
+<?php endif; ?>

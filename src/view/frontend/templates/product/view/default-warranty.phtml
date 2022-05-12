@@ -1,0 +1,72 @@
+<?php
+/**
+ * Hyva Extend Warranty - Simple product warranty offers block
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Hyva_ExtendWarranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+
+use Magento\Framework\Escaper;
+use Magento\Catalog\Block\Product\View as ProductView;
+
+/** @var Escaper $escaper */
+/** @var ProductView $block */
+
+/** @var \Extend\Warranty\ViewModel\Warranty $viewModel */
+$viewModel = $block->getData('viewModel');
+/** @var string $offerTypeArea */
+$offerTypeArea = $block->getData('offerTypeArea');
+/** @var \Magento\Catalog\Model\Product $product */
+$product = $block->getProduct();
+$productType = $product->getTypeId();
+$isConfigurable = $productType === \Magento\ConfigurableProduct\Model\Product\Type\Configurable::TYPE_CODE;
+?>
+<?php if ($viewModel->isExtendEnabled()): ?>
+    <?= $block->getChildHtml('extend_warranty_product_js') ?>
+
+    <script>
+        function productWarranty_<?= $product->getId() ?>() {
+            return {
+                extendWarranty: null,
+
+                init () {
+                    if (!window.Extend) {
+                        window.addEventListener('extend-sdk-ready', () => this.initWarranty(), { once: true });
+                    } else {
+                        this.initWarranty();
+                    }
+                },
+
+                initWarranty () {
+                    const element = document.getElementById('warranty-offers-<?= $escaper->escapeHtmlAttr($product->getId()) ?>');
+                    const config = {
+                        isInProductView: true,
+                        isConfigurable: <?= $escaper->escapeJs($isConfigurable ? 1 : 0) ?>,
+                        productId: "<?= $escaper->escapeJs($product->getId()) ?>",
+                        productSku: "<?= $escaper->escapeJs($isConfigurable ? 'warranties_are_only_for_simples' : $product->getSku()) ?>",
+                        buttonEnabled: <?= $escaper->escapeJs($viewModel->isProductDetailPageOffersEnabled() ? 1 : 0) ?>,
+                        modalEnabled: <?= $escaper->escapeJs($viewModel->isInterstitialCartOffersEnabled() ? 1 : 0) ?>
+                    };
+
+                    this.extendWarranty = initProductWarrantyOffers(element, config);
+                },
+
+                eventListeners: {
+                    ['@configurable-selection-changed.window'](event) {
+                        if (event.detail && event.detail.productId == <?= $block->escapeJs($product->getId()) ?>) {
+                            this.extendWarranty.onOptionsChanged(event);
+                        }
+                    }
+                }
+            };
+        }
+    </script>
+
+    <div id="warranty-offers-<?= $escaper->escapeHtmlAttr($product->getId()) ?>"
+         x-data="productWarranty_<?= $product->getId() ?>()"
+         x-init="init();"
+         x-spread="eventListeners">
+    </div>
+<?php endif; ?>

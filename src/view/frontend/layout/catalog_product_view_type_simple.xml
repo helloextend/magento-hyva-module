@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Extend Warranty
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Hyva_ExtendWarranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+ -->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <move element="product.info.form.warranty" destination="product.info.form" after="-" />
+
+        <referenceBlock name="product.info.form.warranty">
+            <action method="setTemplate">
+                <argument name="template" xsi:type="string">Hyva_ExtendWarranty::product/view/default-warranty.phtml</argument>
+            </action>
+            <block name="extend.warranty.product.js"
+                   as="extend_warranty_product_js"
+                   template="Hyva_ExtendWarranty::js/product-default-warranty-offers.phtml"
+            />
+        </referenceBlock>
+        <move element="extend.warranty.base.js" destination="extend.warranty.product.js" before="-" />
+    </body>
+</page>

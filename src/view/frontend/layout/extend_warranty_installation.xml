@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Hyva Extend Warranty
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Hyva_ExtendWarranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+ -->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd" label="Extend Warranty Installation">
+    <body>
+        <move element="extend.warranty.js" destination="before.body.end" after="-" />
+        <referenceBlock name="extend.warranty.js">
+            <block name="extend.warranty.tracking.js" template="Hyva_ExtendWarranty::js/tracking-service.phtml" ifconfig="warranty/tracking/enabled" />
+        </referenceBlock>
+
+        <block name="extend.warranty.base.js"
+               as="extend_warranty_base_js"
+               template="Hyva_ExtendWarranty::js/warranty-offers-base.phtml"
+        />
+    </body>
+</page>

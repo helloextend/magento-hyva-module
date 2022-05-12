@@ -1,0 +1,35 @@
+<?php
+/**
+ * Hyva Extend Warranty - "Add Warranty" button in Mini-cart
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Hyva_ExtendWarranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/** @var Escaper $escaper */
+/** @var Template $block */
+
+/** @var \Extend\Warranty\ViewModel\Warranty $viewModel */
+$viewModel = $block->getData('viewModel');
+?>
+<?php if ($viewModel->isExtendEnabled() && $viewModel->isShoppingCartOffersEnabled()): ?>
+<template x-if="item.product_type != '<?= $escaper->escapeJs(\Extend\Warranty\Model\Product\Type::TYPE_CODE) ?>'">
+    <div class="cart-warranty-offers"
+         :id="'minicart-warranty-offers-' + item.id"
+         :data-sku="item.product_sku"
+    >
+        <div x-data="initCartItemWarrantyOffers($el, {
+                isInCartPage: false,
+                trackingEnabled: <?= $escaper->escapeJs($viewModel->isTrackingEnabled() ? 1 : 0) ?>
+             })"
+             x-init="init()"
+             class="h-9">
+        </div>
+    </div>
+</template>
+<?php endif; ?>

@@ -1,0 +1,86 @@
+<?php
+/**
+ * Extend Warranty - Products List "Add Warranty" functionality
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Extend_Warranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+
+use Magento\Framework\Escaper;
+use Magento\Catalog\Block\Product\ProductList\Item\Block as ItemBlock;
+
+/** @var Escaper $escaper */
+/** @var ItemBlock $block */
+
+/** @var \Magento\Catalog\Model\Product $product */
+$_product = $block->getProduct();
+/** @var \Extend\Warranty\ViewModel\Warranty $viewModel */
+$viewModel = $block->getData('viewModel');
+
+$productType = $_product->getTypeId();
+$isSimple = $productType === \Magento\Catalog\Model\Product\Type::TYPE_SIMPLE;
+$isConfigurable = $productType === \Magento\ConfigurableProduct\Model\Product\Type\Configurable::TYPE_CODE;
+?>
+
+<?php if ($viewModel->isExtendEnabled() && $viewModel->isProductsListOffersEnabled() && ($isSimple || $isConfigurable)): ?>
+    <script>
+        function productWarranty_<?= $_product->getId() ?>() {
+            return {
+                extendWarranty: null,
+
+                init () {
+                    if (!window.Extend) {
+                        window.addEventListener('extend-sdk-ready', () => this.initWarranty(), { once: true });
+                    } else {
+                        this.initWarranty();
+                    }
+                },
+
+                initWarranty () {
+                    const element = document.getElementById('warranty-offers-<?= $escaper->escapeHtmlAttr($_product->getId()) ?>');
+                    const config = {
+                        isInProductView: false,
+                        isConfigurable: <?= $escaper->escapeJs($isConfigurable ? 1 : 0) ?>,
+                        productId: "<?= $escaper->escapeJs($_product->getId()) ?>",
+                        productSku: "<?= $escaper->escapeJs($isConfigurable ? '' : $_product->getSku()) ?>",
+                        buttonEnabled: false,
+                        modalEnabled: true,
+                        selectors: {
+                            "addToCartForm": "form.product_addtocart_form",
+                            "addToCartButton": "button.btn-primary"
+                        }
+                    };
+
+                    this.extendWarranty = initProductWarrantyOffers(element, config);
+                },
+
+                eventListeners: {
+                    ['@configurable-selection-changed.window'](event) {
+                        if (event.detail && event.detail.productId == <?= $block->escapeJs($_product->getId()) ?>) {
+                            this.extendWarranty.onOptionsChanged(event);
+                        }
+                    }
+                }
+            };
+        }
+    </script>
+
+    <div id="warranty-offers-<?= $escaper->escapeHtmlAttr($_product->getId()) ?>"
+         x-data="productWarranty_<?= $_product->getId() ?>()"
+         x-init="init();"
+         x-spread="eventListeners">
+    </div>
+<?php endif; ?>
+
+<?php
+// Make sure original product details are rendered as expected
+$childNames = $block->getChildNames();
+foreach ($childNames as $childName) {
+    $childBlock = $block->getChildBlock($childName);
+    $childBlock->setData('product', $_product);
+    $childBlock->setProduct($_product);
+    echo $childBlock->toHtml();
+}
+?>

@@ -1,0 +1,242 @@
+<?php
+/**
+ * Hyva Extend Warranty - Simple product warranty offers js-object
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Hyva_ExtendWarranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/** @var Escaper $escaper */
+/** @var Template $block */
+?>
+
+<?= $block->getChildHtml('extend.warranty.base.js') ?>
+
+<script>
+    function initGroupedProductWarrantyOffers(element, config) {
+        var defaults = {
+            isInProductView: true,
+            isConfigurable: false,
+            productId: null,
+            productSku: null,
+            buttonEnabled: true,
+            modalEnabled: false,
+            blockClass: 'product-warranty-offers',
+            insertionPoint: 'div.actions',
+            insertionLogic: 'before',
+            formInputName: 'warranty',
+            formInputClass: 'extend-warranty-input',
+            selectors: {
+                addToCartForm: '#product_addtocart_form',
+                addToCartButton: '#product-addtocart-button'
+            }
+        };
+
+        var groupedWarrantyOffers = {
+            element: null,
+            extendWarranty: null,
+            options: {},
+
+            mainWrap: null,
+            warrantyBlock: null,
+            addToCartForm: null,
+            addToCartButton: null,
+            optionsWrap: null,
+            useNativeSubmit: false,
+
+            init(element, config) {
+                this.element = element;
+                this.options = Object.assign(defaults, config);
+
+                this._initElements();
+                this._bind();
+
+                this.extendWarranty = initWarrantyOffers(this.element, this.options);
+                this._renderWarrantyOffers();
+
+                return this;
+            },
+
+            /**
+             * Init basic elements
+             * @protected
+             */
+            _initElements: function () {
+                this.mainWrap = this.options.isInProductView ?
+                    this.element.closest('.column.main') :
+                    this.element.closest('form.product_addtocart_form');
+
+                this.addToCartForm = this.mainWrap.tagName === 'FORM' ?
+                    this.mainWrap :
+                    this.mainWrap.querySelector(this.options.selectors.addToCartForm);
+                this.addToCartButton = this.mainWrap.querySelector(this.options.selectors.addToCartButton);
+
+                if (this.options.isConfigurable) {
+                    this.optionsWrap = this.mainWrap.querySelector('div[x-data="initConfigurableSwatchOptions_' + this.options.productId + '()"]');
+                }
+            },
+
+            /**
+             * Bind events
+             * @protected
+             */
+            _bind: function () {
+                if (!this.options.buttonEnabled && !this.options.modalEnabled)
+                    return;
+
+                if (this.addToCartForm && this.addToCartForm.length) {
+                    this.addToCartButton.addEventListener('click', this._onAddToCart.bind(this));
+                }
+            },
+
+            /**
+             * Enables warranty offers block
+             * @protected
+             */
+            _renderWarrantyOffers: function () {
+                if (this.options.buttonEnabled) {
+                    this.extendWarranty.renderOffersButton();
+                }
+            },
+
+            /**
+             * Returns simple product SKU for warranty offers
+             * @protected
+             */
+            _getWarrantyProductSku: function () {
+                var simpleSku = this.options.productSku;
+
+                if (this.options.isConfigurable && this.optionsWrap) {
+                    var optionsData = this.optionsWrap.__x ? this.optionsWrap.__x.$data : null;
+                    if (optionsData && optionsData.productIndex && this.addToCartForm.checkValidity()) {
+                        var skus = optionsData.optionConfig.skus || [];
+                        if (skus.hasOwnProperty(optionsData.productIndex)) {
+                            simpleSku = skus[optionsData.productIndex];
+                        }
+                    }
+                }
+
+                return simpleSku;
+
+            },
+
+            /**
+             * Handles product options `change` event
+             * @protected
+             * @param {CustomEvent} event - The event arguments
+             */
+            onOptionsChanged: function (event) {
+                if (!this.options.buttonEnabled)
+                    return;
+
+                var productSku = this._getWarrantyProductSku();
+                this.extendWarranty.updateActiveProduct(productSku);
+            },
+
+            /**
+             * Handles "Add To Cart" form `submit` event.
+             * @protected
+             * @param {Event} event - The event arguments
+             * @return {Boolean}
+             */
+            _onAddToCart: function (event) {
+                if (!this.addToCartForm.checkValidity())
+                    return;
+
+                this._removeWarrantyInputs();
+
+                if (this.useNativeSubmit || (!this.options.buttonEnabled && !this.options.modalEnabled))
+                    return true;
+
+                var productSku = this._getWarrantyProductSku();
+
+                // Product warranty offers block enabled
+                if (this.options.buttonEnabled) {
+                    // get the warranty component instance & plan selection
+                    var component = this.extendWarranty.getButtonInstance();
+                    var plan = component ? component.getPlanSelection() : null;
+
+                    if (plan) {
+                        this._appendWarrantyInputs(this.extendWarranty, productSku, plan, 'buttons');
+                        this._submitAddToCartForm();
+
+                        event.preventDefault();
+                        event.stopPropagation();
+                        return false;
+                    }
+                }
+
+                // Plan is not selected & warranty offers modal is enabled
+                if (this.options.modalEnabled) {
+                    this._addToCartFromModal(productSku);
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return false;
+                }
+
+                return true;
+            },
+
+            /**
+             * Opens Extend Warranty modal
+             * @protected
+             * @param {String} productSku - currently selected product SKU
+             */
+            _addToCartFromModal: function (productSku) {
+                this.extendWarranty.openOffersModal(productSku, function (plan) {
+                    this._removeWarrantyInputs();
+
+                    if (plan) {
+                        this._appendWarrantyInputs(this.extendWarranty, productSku, plan, 'modal');
+                    }
+                    this._submitAddToCartForm();
+                }.bind(this));
+            },
+
+            /**
+             * Appends warranty inputs to the "Add To Cart" form
+             * @protected
+             * @param {Object} extendWarranty - `WarrantyOffers` instance
+             * @param {Object} plan - selected warranty offer plan
+             * @param {String} productSku - currently selected product SKU
+             * @param {String} componentName - component name for tracking (`button` or `modal`)
+             */
+            _appendWarrantyInputs: function (extendWarranty, productSku, plan, componentName) {
+                var inputs = extendWarranty.getWarrantyFormInputs(productSku, plan, componentName);
+                for (var i = 0; i < inputs.length; i++) {
+                    inputs[i].classList.add(this.options.formInputClass);
+                    this.addToCartForm.appendChild(inputs[i]);
+                }
+            },
+
+            /**
+             * Removes warranty inputs from the "Add To Cart" form
+             * @protected
+             */
+            _removeWarrantyInputs: function () {
+                var inputs = this.addToCartForm.querySelectorAll('input.' + this.options.formInputClass);
+                for (var i = 0; i < inputs.length; i++) {
+                    this.addToCartForm.removeChild(inputs[i]);
+                }
+            },
+
+            /**
+             * Submits "Add To Cart" form
+             * @protected
+             */
+            _submitAddToCartForm: function () {
+                this.useNativeSubmit = true;
+                this.addToCartForm.submit();
+                this.useNativeSubmit = false;
+            }
+        };
+
+        return groupedWarrantyOffers.init(element, config);
+    }
+</script>

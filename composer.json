@@ -1,0 +1,37 @@
+{
+    "name": "extend/magento-hyva-module",
+    "description": "Hyvä Themes Compatibility module for Extend Warranty",
+    "require": {
+        "magento/framework": ">=101.0",
+        "hyva-themes/magento2-compat-module-fallback": "*",
+        "extend/module-warranty": "dev-master"
+    },
+    "type": "magento2-module",
+    "version": "1.0.0",
+    "license": [
+        "OSL-3.0",
+        "AFL-3.0"
+    ],
+    "authors": [
+        {
+            "name": "Gamma Partners LLC",
+            "email": "support@gammapartners.com",
+            "homepage": "https://www.gammapartners.com",
+            "role": "Support"
+        }
+    ],
+    "autoload": {
+        "files": [
+            "src/registration.php"
+        ],
+        "psr-4": {
+            "Extend\\WarrantyHyva\\": "src/"
+        }
+    },
+    "repositories": {
+        "extend": {
+            "type": "git",
+            "url": "https://github.com/helloextend/magento-extension/"
+        }
+    }
+}
