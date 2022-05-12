@@ -55,7 +55,7 @@ $ php bin/magento cache:clean
 ## Install via Composer
 To install/update the extension with Composer, the following commands must be executed:
 ```zsh
-$ composer config repositories.extend git https://github.com/helloextend/magento-hyva-extension/
+$ composer config repositories.extend/module-warranty-hyva git https://github.com/helloextend/magento-hyva-extension/
 $ composer require extend/module-warranty-hyva:dev-master
 $ php bin/magento setup:upgrade
 ```
