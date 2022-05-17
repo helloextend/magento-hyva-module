@@ -17,19 +17,17 @@ use Magento\Framework\View\Element\Template;
 /** @var \Extend\Warranty\ViewModel\Warranty $viewModel */
 $viewModel = $block->getData('viewModel');
 ?>
-<?php if ($viewModel->isExtendEnabled() && $viewModel->isShoppingCartOffersEnabled()): ?>
-<template x-if="item.product_type != '<?= $escaper->escapeJs(\Extend\Warranty\Model\Product\Type::TYPE_CODE) ?>'">
-    <div class="cart-warranty-offers"
-         :id="'minicart-warranty-offers-' + item.id"
-         :data-sku="item.product_sku"
-    >
-        <div x-data="initCartItemWarrantyOffers($el, {
-                isInCartPage: false,
-                trackingEnabled: <?= $escaper->escapeJs($viewModel->isTrackingEnabled() ? 1 : 0) ?>
-             })"
-             x-init="init()"
-             class="h-9">
-        </div>
+<?php if ($viewModel->isExtendEnabled()): ?>
+<div class="cart-warranty-offers"
+     :id="'minicart-warranty-offers-' + item.item_id"
+     :data-item="item.item_id"
+>
+    <div x-data="initCartItemWarrantyOffers($el, {
+            isInCartPage: false,
+            buttonEnabled: <?= $escaper->escapeJs($viewModel->isShoppingCartOffersEnabled() ? 1 : 0) ?>
+         })"
+         x-init="init()"
+         @warranty-data-loaded.window="onGetCartData(event.detail)">
     </div>
-</template>
+</div>
 <?php endif; ?>

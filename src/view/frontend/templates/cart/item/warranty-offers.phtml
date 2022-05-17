@@ -17,19 +17,32 @@ use Magento\Framework\View\Element\Template;
 /** @var \Extend\Warranty\ViewModel\Warranty $viewModel */
 $viewModel = $block->getData('viewModel');
 ?>
-<?php if ($viewModel->isExtendEnabled() && $viewModel->isShoppingCartOffersEnabled()): ?>
-<template x-if="item.product_type != '<?= $escaper->escapeJs(\Extend\Warranty\Model\Product\Type::TYPE_CODE) ?>'">
-    <div class="cart-warranty-offers"
-         :id="'cart-warranty-offers-' + item.id"
-         :data-sku="item.product.sku"
-    >
-        <div x-data="initCartItemWarrantyOffers($el, {
-                isInCartPage: true,
-                trackingEnabled: <?= $escaper->escapeJs($viewModel->isTrackingEnabled() ? 1 : 0) ?>
-             })"
-             x-init="init()"
-             @private-content-loaded.parent="onGetCartData($event.detail, $dispatch)">
-        </div>
+
+<?php if ($viewModel->isExtendEnabled()): ?>
+<div class="cart-warranty-offers"
+     :id="'cart-warranty-offers-' + item.id"
+     :data-item="item.id"
+>
+    <div x-data="initCartItemWarrantyOffers($el, {
+            isInCartPage: true,
+            buttonEnabled: <?= $escaper->escapeJs($viewModel->isShoppingCartOffersEnabled() ? 1 : 0) ?>
+         })"
+         x-init="init()"
+         @warranty-data-loaded.window="onGetCartData(event.detail)">
+
+        <template x-if="itemCartData && itemCartData.product_type == '<?= $escaper->escapeJs(\Extend\Warranty\Model\Product\Type::TYPE_CODE) ?>'">
+            <template x-for="option in itemCartData.options">
+                <div class="warranty-item-options sm:grid grid-cols-4 pt-2">
+                    <div class="text-sm font-semibold inline-block">
+                        <span x-text="option.label"></span>:
+                    </div>
+                    <div class="text-sm text-sm col-span-3 inline-block w-full">
+                        <span x-html="option.value"></span>
+                    </div>
+                </div>
+            </template>
+        </template>
+
     </div>
-</template>
+</div>
 <?php endif; ?>

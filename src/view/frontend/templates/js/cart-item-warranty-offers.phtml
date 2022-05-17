@@ -8,6 +8,7 @@
  * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
  */
 
+use Magento\Framework\Escaper;
 use Magento\Framework\View\Element\Template;
 use Hyva\GraphqlViewModel\ViewModel\GraphqlViewModel;
 use Hyva\Theme\Model\ViewModelRegistry;
@@ -15,6 +16,7 @@ use Hyva\Theme\ViewModel\Cart\GraphQlQueriesWithVariables as GraphQlQueries;
 use Hyva\Theme\ViewModel\Store as StoreViewModel;
 
 /** @var Template $block */
+/** @var Escaper $escaper */
 /** @var ViewModelRegistry $viewModels */
 
 /** @var GraphQlQueries $viewModelCart */
@@ -25,55 +27,128 @@ $viewModelStore = $viewModels->require(StoreViewModel::class);
 $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
 ?>
 <script>
+    function initCartWarrantyDetails() {
+        return {
+            cart: {},
+            cartItems: {},
+            extendCartData: {},
+
+            getExtendCartData(data) {
+                if (data.cart) {
+                    this.cart = data.cart
+                    this.cartItems = this.cart && this.cart.items ?
+                        this.cart.items.sort(function(a,b) { return a.item_id - b.item_id }) :
+                        [];
+
+                    // global variable with cart data
+                    window.extendCartData = {
+                        cartId: this.cart.cartId,
+                        items: JSON.parse(JSON.stringify(this.cartItems))
+                    };
+                    window.dispatchEvent(new CustomEvent('warranty-data-loaded', { detail: window.extendCartData }));
+                }
+            }
+        }
+    }
+
     function initCartItemWarrantyOffers(element, config) {
         return {
             element: element,
             options: {
                 isInCartPage: config.isInCartPage,
-                productSku: element.parentNode.dataset.sku,
-                buttonEnabled: true,
-                modalEnabled: false,
-                trackingEnabled: config.trackingEnabled || false,
+                itemId: element.parentNode.dataset.item,
+                buttonEnabled: config.buttonEnabled,
                 addToCartEvent: null
             },
-            itemsWrap: null,
-            itemsHandler: null,
+            itemElem: null,
+            itemCartData: null,
 
             init() {
-                this.itemsWrap = this.options.isInCartPage ?
-                    this.element.closest('section[x-data="initCart()"]') :
-                    this.element.closest('#cart-drawer');
-                this.itemsHandler = this.itemsWrap.__x && this.itemsWrap.__x.$data ? this.itemsWrap.__x.$data : {};
+                this.itemElem = this.options.isInCartPage ?
+                    this.element.closest('.table-row-item') :
+                    this.element.closest('.items-start');
 
                 if (!window.Extend) {
-                    window.addEventListener('extend-sdk-ready', () => this.renderSimpleButton(), { once: true });
+                    window.addEventListener('extend-sdk-ready', () => this.setItemCartData(), { once: true });
                 } else {
-                    this.renderSimpleButton();
+                    this.setItemCartData();
+                }
+            },
+
+            onGetCartData: function () {
+                this.setItemCartData();
+            },
+
+            /**
+             * Defines current item data based on global `window.extendCartData` object
+             */
+            setItemCartData: function () {
+                if (window.extendCartData) {
+                    this.itemCartData = (window.extendCartData.items || []).find((item) => {
+                        return item.item_id == this.options.itemId;
+                    });
+                } else {
+                    this.itemCartData = null;
+                }
+
+                if (this.itemCartData) {
+                    if (this.itemCartData.product_type == '<?= $escaper->escapeJs(\Extend\Warranty\Model\Product\Type::TYPE_CODE) ?>') {
+                        this.adjustWarrantyCartElement();
+                    } else {
+                        this.renderSimpleButton();
+                    }
                 }
             },
 
             /**
-             * Renders warranty simple offer button
+             * Makes changes to the Warranty cart item view
+             */
+            adjustWarrantyCartElement: function () {
+                const skuElem = this.options.isInCartPage ?
+                    this.itemElem.querySelector('div.item-options') :
+                    this.itemElem.querySelector('p.text-xl + p.text-sm');
+                const editBtn = this.options.isInCartPage ?
+                    this.itemElem.querySelector('div.cart-warranty-offers ~ p > a.text-primary-dark') :
+                    this.itemElem.querySelector('div.cart-warranty-offers ~ a.btn-primary');
+
+                if (skuElem) {
+                    skuElem.style.display = 'none';
+                }
+                if (editBtn) {
+                    editBtn.classList.add('hidden');
+                }
+            },
+
+            /**
+             * Renders Extend simple offer button
              */
             renderSimpleButton: function () {
                 if (!this.options.buttonEnabled)
                     return;
 
-                Extend.buttons.renderSimpleOffer(this.element, {
-                    referenceId: this.options.productSku,
-                    onAddToCart: (data) => {
-                        let warranty = data.plan;
-                        if (warranty && data.product) {
-                            warranty.product = data.product.id;
-                        }
+                const button = Extend.buttons.instance(this.element);
+                const referenceId = this.itemCartData && this.itemCartData.product_can_add_warranty ?
+                    this.itemCartData.product_sku :
+                    null;
 
-                        this._addToCart(warranty);
+                if (button) {
+                    const product = button.getActiveProduct() || { id: null };
+                    if (product.id !== referenceId) {
+                        button.setActiveProduct(referenceId);
                     }
-                });
-            },
+                } else if (referenceId) {
+                    Extend.buttons.renderSimpleOffer(this.element, {
+                        referenceId: referenceId,
+                        onAddToCart: (data) => {
+                            let warranty = data.plan;
+                            if (warranty && data.product) {
+                                warranty.product = data.product.id;
+                            }
 
-            onGetCartData: function (a, b) {
-                debugger;
+                            this._addToCart(warranty);
+                        }
+                    });
+                }
             },
 
             /**
@@ -82,7 +157,7 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
              * @param {Object|null} warranty - warranty plan data
              */
             _addToCart: function (warranty) {
-                if (!warranty || !this.itemsHandler)
+                if (!warranty || !window.extendCartData)
                     return;
 
                 const addWarrantyQuery = `<?= /** @noEscape */ $viewModelGraphQl->query(
@@ -111,52 +186,36 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
                     }'
                 ) ?>`;
 
-                const cartId = this.itemsHandler && this.itemsHandler.cart ?
-                    this.itemsHandler.cart.cartId :
-                    this.itemsHandler.cartId;
-
                 const variables = {
-                    cartId: cartId,
+                    cartId: window.extendCartData.cartId,
                     warranty: warranty,
-                    qty: 1
+                    qty: this.itemCartData.qty
                 };
 
-                if (this.itemsHandler.startLoading) {
-                    this.itemsHandler.startLoading();
-                }
+                fetch('<?= $escaper->escapeUrl($block->getBaseUrl()) ?>graphql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json;charset=utf-8',
+                        'Store': '<?= /* @noEscape */ $viewModelStore->getStoreCode() ?>'
+                    },
+                    body: JSON.stringify({query: addWarrantyQuery, variables: variables})
+                })
+                .then((response) => {
+                    return response.json()
+                })
+                .then((data) => {
+                    window.dispatchEvent(new CustomEvent('clear-messages'));
 
-                window.setTimeout(() => {
-                    fetch('<?= $block->escapeUrl($block->getBaseUrl()) ?>graphql', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json;charset=utf-8',
-                            'Store': '<?= /* @noEscape */ $viewModelStore->getStoreCode() ?>'
-                        },
-                        body: JSON.stringify({query: addWarrantyQuery, variables: variables})
-                    })
-                    .then((response) => {
-                        return response.json()
-                    })
-                    .then((data) => {
-                        window.dispatchEvent(new CustomEvent('clear-messages'));
-
-                        if (data.errors) {
-                            this._onAddToCartError(data.error);
-                        } else {
-                            this._onAddToCartSuccess(data);
-                        }
-                    })
-                    .catch((error) => {
-                        console.error(error);
-                        this._onAddToCartError("<?= $block->escapeJs(__("Sorry, there has been an error processing your request. Please try again or contact our support.")) ?>");
-                    })
-                    .finally(() => {
-                        if (this.itemsHandler.stopLoading) {
-                            this.itemsHandler.stopLoading();
-                        }
-                    });
-
-                }, 1000);
+                    if (data.errors) {
+                        this._onAddToCartError(data.error);
+                    } else {
+                        this._onAddToCartSuccess(data && data.data ? data.data.addWarrantyToCart : null);
+                    }
+                })
+                .catch((error) => {
+                    console.error(error);
+                    this._onAddToCartError("<?= $escaper->escapeJs(__("Sorry, there has been an error processing your request. Please try again or contact our support.")) ?>");
+                });
             },
 
             /**
@@ -165,29 +224,21 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
              * @param {Object} response - json-response data
              */
             _onAddToCartSuccess: function (response) {
-                // Extend tracking
-                if (this.options.trackingEnabled && typeof (response.trackingData) !== 'undefined') {
-                    const trackEvent = new CustomEvent('extend:trackOfferAddToCart', {
-                        detail: response.trackingData
-                    });
-                    window.dispatchEvent(trackEvent);
+                // Hide button
+                const button = Extend.buttons.instance(this.element);
+                if (button) {
+                    button.setActiveProduct(null);
                 }
 
                 // trigger warranty 'Add To Cart' event
-                if (this.options.addToCartEvent) {
+                if (this.options.addToCartEvent && response.cart) {
                     const addToCartEvent = new CustomEvent('ajax:' + this.options.addToCartEvent, {
-                        detail: response.trackingData
+                        detail: response.cart
                     });
                     window.dispatchEvent(addToCartEvent);
                 }
 
-                // reload Cart page items
-                if (this.options.isInCartPage &&
-                    this.itemsHandler && this.itemsHandler.getCart) {
-                    this.itemsHandler.getCart();
-                }
-
-                // reload mini-cart items
+                // reload cart items
                 this._reloadCustomerData();
             },
 
@@ -200,6 +251,10 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
                 typeof window.dispatchMessages !== "undefined" && window.dispatchMessages(messages, 10000);
             },
 
+            /**
+             * Cart items refresh by reloading customer data
+             * @protected
+             */
             _reloadCustomerData() {
                 const reloadCustomerDataEvent = new CustomEvent("reload-customer-section-data");
                 window.dispatchEvent(reloadCustomerDataEvent);
@@ -207,3 +262,7 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
         };
     }
 </script>
+
+<div x-data="initCartWarrantyDetails()"
+     @private-content-loaded.window="getExtendCartData(event.detail.data)">
+</div>
