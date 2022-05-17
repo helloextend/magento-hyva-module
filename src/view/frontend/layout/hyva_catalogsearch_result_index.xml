@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Extend Warranty
+ * Hyva Extend Warranty (Search results page)
  *
  * @author      Extend Magento Team <magento@guidance.com>
  * @category    Extend
@@ -9,19 +9,17 @@
  * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
  */
  -->
-<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <body>
-        <move element="product.info.form.warranty" destination="product.info.form" after="-" />
-
-        <referenceBlock name="product.info.form.warranty">
-            <action method="setTemplate">
-                <argument name="template" xsi:type="string">Hyva_ExtendWarranty::product/view/default-warranty.phtml</argument>
-            </action>
+        <referenceBlock name="search.result.list.additional">
             <block name="extend.warranty.product.js"
                    as="extend_warranty_product_js"
                    template="Hyva_ExtendWarranty::js/product-default-warranty-offers.phtml"
             />
         </referenceBlock>
         <move element="extend.warranty.base.js" destination="extend.warranty.product.js" before="-" />
+
+        <referenceBlock name="catalogsearch.product.warranty" remove="true" />
     </body>
 </page>

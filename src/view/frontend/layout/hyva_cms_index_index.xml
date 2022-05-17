@@ -14,7 +14,9 @@
     <body>
         <move element="extend.warranty.js" destination="before.body.end" after="-" />
         <referenceBlock name="extend.warranty.js">
-            <block name="extend.warranty.tracking.js" template="Hyva_ExtendWarranty::js/tracking-service.phtml" ifconfig="warranty/tracking/enabled" />
+            <block name="extend.warranty.tracking.js"
+                   template="Hyva_ExtendWarranty::js/tracking-service.phtml"
+                   ifconfig="warranty/tracking/enabled" />
         </referenceBlock>
     </body>
 </page>

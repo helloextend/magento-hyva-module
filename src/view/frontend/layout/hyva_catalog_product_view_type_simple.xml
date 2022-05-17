@@ -9,11 +9,12 @@
  * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
  */
  -->
-<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <body>
-        <move element="product.info.options.warranty" destination="product.info.form" after="-" />
+        <move element="product.info.form.warranty" destination="product.info.form" after="-" />
 
-        <referenceBlock name="product.info.options.warranty">
+        <referenceBlock name="product.info.form.warranty">
             <action method="setTemplate">
                 <argument name="template" xsi:type="string">Hyva_ExtendWarranty::product/view/default-warranty.phtml</argument>
             </action>
