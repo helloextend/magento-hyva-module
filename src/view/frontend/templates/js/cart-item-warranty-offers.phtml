@@ -56,7 +56,6 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
             element: element,
             options: {
                 isInCartPage: config.isInCartPage,
-                itemId: element.parentNode.dataset.item,
                 buttonEnabled: config.buttonEnabled,
                 addToCartEvent: null
             },
@@ -83,9 +82,10 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
              * Defines current item data based on global `window.extendCartData` object
              */
             setItemCartData: function () {
+                const itemId = this.element.parentNode.dataset.item;
                 if (window.extendCartData) {
                     this.itemCartData = (window.extendCartData.items || []).find((item) => {
-                        return item.item_id == this.options.itemId;
+                        return item.item_id == itemId;
                     });
                 } else {
                     this.itemCartData = null;
