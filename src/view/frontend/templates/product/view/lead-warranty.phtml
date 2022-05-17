@@ -1,0 +1,124 @@
+<?php
+/**
+ * Hyva Extend Warranty - Post Purchase Lead product warranty offers block
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Hyva_ExtendWarranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+use Extend\Warranty\ViewModel\Warranty;
+
+/** @var Escaper $escaper */
+/** @var Template $block */
+
+/** @var Warranty $viewModel */
+$viewModel = $block->getData('viewModel');
+$leadToken = $escaper->escapeHtml($escaper->escapeJs($viewModel->getLeadTokenFromUrl()));
+?>
+<?php if ($viewModel->isExtendEnabled() && $viewModel->isPostPurchaseLeadModalEnabled() && !empty($leadToken)): ?>
+    <script>
+        function postPurchaseLeadWarranty() {
+            return {
+                options: {
+                    leadToken: "<?= $leadToken ?>",
+                    addLeadUrl : "<?= $escaper->escapeUrl($block->getUrl('warranty/cart/addlead')) ?>"
+                },
+
+                init: function() {
+                    if (!window.Extend) {
+                        window.addEventListener('extend-sdk-ready', () => this.initWarrantyModal(), { once: true });
+                    } else {
+                        this.initWarrantyModal();
+                    }
+                },
+
+                initWarrantyModal: function() {
+                    Extend.aftermarketModal.open({
+                        leadToken: this.options.leadToken,
+                        onClose: (plan, product) => {
+                            if (plan && product) {
+                                this._addToCart({
+                                    leadToken: this.options.leadToken,
+                                    planId: plan.planId,
+                                    price: plan.price,
+                                    term: plan.term,
+                                    product: product.id,
+                                    formKey: hyva.getFormKey()
+                                });
+                            }
+                        }
+                    });
+                },
+
+                /**
+                 * Post-purchase warranty "Add To Cart" handler
+                 * @protected
+                 * @param {Object|null} warranty - warranty plan data
+                 */
+                _addToCart: function(warranty) {
+                    if (!warranty)
+                        return;
+
+                    fetch(this.options.addLeadUrl, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            warranty: warranty,
+                            leadToken: this.options.leadToken,
+                            form_key: hyva.getFormKey()
+                        }),
+                        headers: {
+                            'Content-Type': 'application/json;charset=utf-8'
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.json();
+                        } else {
+                            this._onAddToCartError('<?= $escaper->escapeJs(__("Sorry, there has been an error processing your request. Please try again or contact our support.")) ?>');
+                        }
+                    })
+                    .then(data => {
+                        if (data && !data.error) {
+                            this._onAddToCartSuccess(data);
+                        } else {
+                            this._onAddToCartError(data.error);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error(error);
+                        this._onAddToCartError('<?= $escaper->escapeJs(__("Sorry, there has been an error processing your request. Please try again or contact our support.")) ?>');
+                    });
+                },
+
+                /**
+                 * Post-purchase warranty "Add To Cart" succeed
+                 * @protected
+                 * @param {Object} response - json-response data
+                 */
+                _onAddToCartSuccess: function(response) {
+                    // track Extend 'Add To Cart'
+                    if (this.options.trackingEnabled && typeof (response.trackingData) !== 'undefined') {
+                        const extendEvent = new CustomEvent('extend:trackOfferAddedToCart', {
+                            detail: response.trackingData
+                        });
+                        window.dispatchEvent(extendEvent);
+                    }
+                },
+
+                /**
+                 * Post-purchase warranty "Add To Cart" failed
+                 * @protected
+                 */
+                _onAddToCartError: function(errorMessage) {
+                    const messages = [{ type: 'error', text: errorMessage }];
+                    typeof window.dispatchMessages !== "undefined" && window.dispatchMessages(messages, 10000);
+                }
+            };
+        }
+        postPurchaseLeadWarranty().init();
+    </script>
+<?php endif; ?>
