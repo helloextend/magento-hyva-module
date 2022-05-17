@@ -39,7 +39,7 @@ $isConfigurable = $productType === \Magento\ConfigurableProduct\Model\Product\Ty
                 },
 
                 initWarranty () {
-                    const element = document.getElementById('warranty-offers-<?= $escaper->escapeHtmlAttr($_product->getId()) ?>');
+                    const element = this.$el;
                     const config = {
                         isInProductView: false,
                         isConfigurable: <?= $escaper->escapeJs($isConfigurable ? 1 : 0) ?>,

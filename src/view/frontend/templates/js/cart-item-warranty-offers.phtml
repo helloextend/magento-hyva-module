@@ -107,15 +107,17 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
                 const skuElem = this.options.isInCartPage ?
                     this.itemElem.querySelector('div.item-options') :
                     this.itemElem.querySelector('p.text-xl + p.text-sm');
-                const editBtn = this.options.isInCartPage ?
-                    this.itemElem.querySelector('div.cart-warranty-offers ~ p > a.text-primary-dark') :
-                    this.itemElem.querySelector('div.cart-warranty-offers ~ a.btn-primary');
+                const editBtns = this.options.isInCartPage ?
+                    this.itemElem.querySelectorAll('div.cart-warranty-offers ~ p > a.text-primary-dark') :
+                    this.itemElem.querySelectorAll('div.cart-warranty-offers ~ a.btn-primary');
 
                 if (skuElem) {
                     skuElem.style.display = 'none';
                 }
-                if (editBtn) {
-                    editBtn.classList.add('hidden');
+                if (editBtns) {
+                    Array.from(editBtns, (editBtn) => {
+                        editBtn.classList.add('hidden');
+                    });
                 }
             },
 
@@ -191,6 +193,8 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
                     warranty: warranty,
                     qty: this.itemCartData.qty
                 };
+                const cssClass = 'opacity-50';
+                this.itemElem.classList.add(cssClass);
 
                 fetch('<?= $escaper->escapeUrl($block->getBaseUrl()) ?>graphql', {
                     method: 'POST',
@@ -215,6 +219,9 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
                 .catch((error) => {
                     console.error(error);
                     this._onAddToCartError("<?= $escaper->escapeJs(__("Sorry, there has been an error processing your request. Please try again or contact our support.")) ?>");
+                })
+                .finally(() => {
+                    this.itemElem.classList.remove(cssClass);
                 });
             },
 
