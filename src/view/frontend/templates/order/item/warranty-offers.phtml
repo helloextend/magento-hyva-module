@@ -24,7 +24,7 @@ $viewModel = $block->getData('viewModel');
 $productType = $product->getTypeId();
 $isWarrantyItem = $productType === \Extend\Warranty\Model\Product\Type::TYPE_CODE;
 
-$leadToken = $_item->getLeadToken() || '{"abc"}';
+$leadToken = $_item->getLeadToken();
 ?>
 
 <?php if (!$isWarrantyItem && $viewModel->isOrderOffersEnabled() && $viewModel->isLeadEnabled() && isset($leadToken)): ?>
@@ -36,7 +36,7 @@ $leadToken = $_item->getLeadToken() || '{"abc"}';
                     itemId: "<?= $escaper->escapeJs($_item->getId()) ?>",
                     productSku: "<?= $escaper->escapeJs($_item->getSku()) ?>",
                     qty: "<?= $escaper->escapeJs($_item->getQtyOrdered()) ?>",
-                    leadToken: "<?= $escaper->escapeJs(implode(", ", /*($viewModel->unserialize($leadToken))*/['abc'])) ?>",
+                    leadToken: "<?= $escaper->escapeJs(implode(", ", ($viewModel->unserialize($leadToken)))) ?>",
                     addLeadUrl : "<?= $escaper->escapeUrl($block->getUrl('warranty/cart/addlead')) ?>",
                     buttonEnabled: true,
                     trackingEnabled: <?= $escaper->escapeJs($viewModel->isTrackingEnabled() ? 1 : 0) ?>,
