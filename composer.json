@@ -4,7 +4,8 @@
     "require": {
         "magento/framework": ">=101.0",
         "hyva-themes/magento2-compat-module-fallback": "*",
-        "extend/module-warranty": "dev-master"
+        "extend/module-warranty": "dev-master",
+        "extend/module-warranty-graph-ql": "1.0.3.x-dev"
     },
     "type": "magento2-module",
     "version": "1.0.0",
@@ -28,10 +29,15 @@
             "Extend\\WarrantyHyva\\": "src/"
         }
     },
+    "minimum-stability": "dev",
     "repositories": {
         "extend": {
             "type": "git",
             "url": "https://github.com/helloextend/magento-extension/"
+        },
+        "extend-graphql": {
+            "type": "git",
+            "url": "https://github.com/helloextend/magento-pwa-backend/"
         }
     }
 }
