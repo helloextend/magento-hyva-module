@@ -1,0 +1,209 @@
+<?php
+/**
+ * Hyva Extend Warranty - Grouped product warranty offers block
+ *
+ * @author      Extend Magento Team <magento@guidance.com>
+ * @category    Extend
+ * @package     Hyva_ExtendWarranty
+ * @copyright   Copyright (c) 2022 Extend Inc. (https://www.extend.com/)
+ */
+
+use Magento\Framework\Escaper;
+use Magento\GroupedProduct\Block\Product\View\Type\Grouped;
+
+/** @var Escaper $escaper */
+/** @var Grouped $block */
+
+/** @var \Extend\Warranty\ViewModel\Warranty $viewModel */
+$viewModel = $block->getData('viewModel');
+/** @var string $offerTypeArea */
+$offerTypeArea = $block->getData('offerTypeArea');
+$_renderWarranty = $viewModel->isExtendEnabled() && $viewModel->isProductDetailPageOffersEnabled();
+
+/** @var \Magento\Catalog\Model\Product $product */
+$product = $block->getProduct();
+
+$_associatedProducts = $block->getAssociatedProducts();
+$_hasAssociatedProducts = count($_associatedProducts) > 0;
+
+$_productsData = [];
+?>
+<?php if ($_renderWarranty && $_hasAssociatedProducts && $product->isSaleable()): ?>
+    <?= $block->getChildHtml('extend.warranty.base.js') ?>
+
+    <?php /* Init warranty offers for each product item */ ?>
+    <?php foreach ($_associatedProducts as $_item): ?>
+        <?php if ($_item->isSaleable()): ?>
+            <script>
+                function groupedProductWarranty_<?= $_item->getId() ?>() {
+                    return {
+                        options: {
+                            isInProductView: true,
+                            productId: "<?= $escaper->escapeJs($_item->getId()) ?>",
+                            productSku: "<?= $escaper->escapeJs($_item->getSku()) ?>",
+                            buttonEnabled: true,
+                            formInputName: 'warranty_<?= $escaper->escapeHtmlAttr($_item->getId()) ?>',
+                            formInputClass: 'extend-warranty-input-<?= $escaper->escapeHtmlAttr($_item->getId()) ?>',
+                            selectors: {
+                                qtyInput: 'input.qty[name="super_group\[<?= $escaper->escapeHtmlAttr($_item->getId()) ?>\]"]',
+                                addToCartForm: '#product_addtocart_form'
+                            }
+                        },
+                        qtyInput: null,
+                        extendWarranty: null,
+
+                        init () {
+                            if (!window.Extend) {
+                                window.addEventListener('extend-sdk-ready', () => this.initWarranty(), { once: true });
+                            } else {
+                                this.initWarranty();
+                            }
+                        },
+
+                        /**
+                         * Enables warranty offers block
+                         * @protected
+                         */
+                        initWarranty: function () {
+                            const addToCartForm = this.$el.closest(this.options.selectors.addToCartForm);
+                            this.qtyInput = addToCartForm.querySelector(this.options.selectors.qtyInput);
+
+                            // Move element after product item row
+                            this.qtyInput.closest('div.flex')
+                                .after(this.$el);
+
+                            // Render warranty offers
+                            this.extendWarranty = initWarrantyOffers(this.$el, this.options);
+                            this._renderWarrantyOffers();
+
+                            // Trigger custom event which will be handled below
+                            const initEvent = new CustomEvent('grouped-item-init', { detail: this });
+                            window.dispatchEvent(initEvent);
+                        },
+
+                        /**
+                         * Enables warranty offers block
+                         * @protected
+                         */
+                        _renderWarrantyOffers: function () {
+                            if (this.options.buttonEnabled) {
+                                this.extendWarranty.renderOffersButton();
+                            }
+                        },
+
+                        /**
+                         * Returns current warranty offers block instance
+                         *
+                         * @return {Object|null}
+                         */
+                        getWarrantyInstance: function () {
+                            return this.extendWarranty.getButtonInstance();
+                        },
+
+                        /**
+                         * Appends warranty inputs to the "Add To Cart" form
+                         * @param {HTMLElement} form - form which will contain input
+                         * @param {Object} plan - selected warranty offer plan
+                         * @param {String} productSku - currently selected product SKU
+                         * @param {String} componentName - component name for tracking (`button` or `modal`)
+                         */
+                        appendWarrantyInputs: function (form, productSku, plan, componentName) {
+                            var inputs = this.extendWarranty.getWarrantyFormInputs(productSku, plan, componentName);
+                            for (var i = 0; i < inputs.length; i++) {
+                                inputs[i].classList.add(this.options.formInputClass);
+                                form.appendChild(inputs[i]);
+                            }
+                        },
+
+                        /**
+                         * Removes warranty inputs from the "Add To Cart" form
+                         * @param {HTMLElement} form - form which contains input
+                         */
+                        removeWarrantyInputs: function (form) {
+                            var inputs = form.querySelectorAll('input.' + this.options.formInputClass);
+                            for (var i = 0; i < inputs.length; i++) {
+                                this.addToCartForm.removeChild(inputs[i]);
+                            }
+                        }
+                    };
+                }
+            </script>
+
+            <div id="warranty-offers-<?= $escaper->escapeHtmlAttr($_item->getId()) ?>"
+                 x-data="groupedProductWarranty_<?= $_item->getId() ?>()"
+                 x-init="init();">
+            </div>
+        <?php endif; ?>
+    <?php endforeach; ?>
+
+    <?php /* Init "Add To Cart" behavior for entire product */ ?>
+    <script>
+        function groupedProduct_<?= $product->getId() ?>() {
+            return {
+                options: {
+                    selectors: {
+                        addToCartForm: '#product_addtocart_form',
+                        addToCartButton: '#product-addtocart-button'
+                    }
+                },
+                mainWrap: null,
+                addToCartForm: null,
+                addToCartButton: null,
+
+                productItems: [],
+
+                init: function () {
+                    this.mainWrap = this.$el.closest('.column.main');
+
+                    this.addToCartForm = this.mainWrap.querySelector(this.options.selectors.addToCartForm);
+                    this.addToCartButton = this.mainWrap.querySelector(this.options.selectors.addToCartButton);
+
+                    if (this.addToCartForm && this.addToCartButton) {
+                        this.addToCartButton.addEventListener('click', this._onAddToCart.bind(this));
+                    }
+                },
+
+                /**
+                 * Handler for grouped product item `init` event
+                 * @protected
+                 * @param {Object} itemObj - The grouped product item data
+                 */
+                onItemInit: function (itemObj) {
+                    this.productItems.push(itemObj);
+                },
+
+                /**
+                 * Handles "Add To Cart" form `submit` event.
+                 * @protected
+                 * @param {Event} event - The event arguments
+                 * @return {Boolean}
+                 */
+                _onAddToCart: function (event) {
+                    this.productItems.forEach((item) => {
+                        item.removeWarrantyInputs(this.addToCartForm);
+                    });
+
+                    // Add selected warranties info to the 'AddToCart' form
+                    this.productItems.forEach((item) => {
+                        const component = item.getWarrantyInstance();
+                        if (component) {
+                            const sku = component.getActiveProduct();
+                            const plan = component ? component.getPlanSelection() : null;
+
+                            if (sku && plan) {
+                                item.appendWarrantyInputs(this.addToCartForm, sku.id, plan, 'buttons');
+                            }
+                        }
+                    });
+
+                    return true;
+                }
+            }
+        }
+    </script>
+
+    <div x-data="groupedProduct_<?= $product->getId() ?>()"
+         x-init="init();"
+         @grouped-item-init.window="onItemInit(event.detail)">
+    </div>
+<?php endif; ?>
