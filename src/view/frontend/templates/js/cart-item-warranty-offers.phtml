@@ -273,3 +273,9 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
 <div x-data="initCartWarrantyDetails()"
      @private-content-loaded.window="getExtendCartData(event.detail.data)">
 </div>
+
+<style>
+    .minicart-warranty-offers iframe {
+        min-height: 38px;
+    }
+</style>
