@@ -5,7 +5,7 @@
         "magento/framework": ">=101.0",
         "hyva-themes/magento2-compat-module-fallback": "*",
         "extend/module-warranty": "dev-master",
-        "extend/module-warranty-graph-ql": "1.0.3"
+        "extend/module-warranty-graph-ql": "1.0.1"
     },
     "type": "magento2-module",
     "version": "1.0.0",
