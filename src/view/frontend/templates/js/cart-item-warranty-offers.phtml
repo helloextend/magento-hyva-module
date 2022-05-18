@@ -211,7 +211,8 @@ $viewModelGraphQl = $viewModels->require(GraphqlViewModel::class);
                     window.dispatchEvent(new CustomEvent('clear-messages'));
 
                     if (data.errors) {
-                        this._onAddToCartError(data.error);
+                        const errors = data.errors.map((err) => { return err.message; });
+                        this._onAddToCartError(errors.join('<br />'));
                     } else {
                         this._onAddToCartSuccess(data && data.data ? data.data.addWarrantyToCart : null);
                     }
