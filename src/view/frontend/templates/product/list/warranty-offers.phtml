@@ -31,6 +31,9 @@ $isConfigurable = $productType === \Magento\ConfigurableProduct\Model\Product\Ty
                 extendWarranty: null,
 
                 init () {
+                    if (typeof (initProductWarrantyOffers) === 'undefined')
+                        return;
+
                     if (!window.Extend) {
                         window.addEventListener('extend-sdk-ready', () => this.initWarranty(), { once: true });
                     } else {
