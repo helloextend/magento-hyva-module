@@ -55,6 +55,24 @@ $leadToken = $escaper->escapeHtml($escaper->escapeJs($viewModel->getLeadTokenFro
                 },
 
                 /**
+                 * Serialize fetch parameters
+                 * @private
+                 */
+                _serialize: function (obj, prefix) {
+                    let str = [];
+                    for (let p in obj) {
+                        if (obj.hasOwnProperty(p)) {
+                            const k = prefix ? prefix + '[' + p + ']' : p,
+                                v = obj[p];
+                            str.push(typeof v == 'object' ?
+                                this._serialize(v, k) :
+                                (encodeURIComponent(k) + '=' + encodeURIComponent(v)));
+                        }
+                    }
+                    return str.join('&');
+                },
+
+                /**
                  * Post-purchase warranty "Add To Cart" handler
                  * @protected
                  * @param {Object|null} warranty - warranty plan data
@@ -65,13 +83,13 @@ $leadToken = $escaper->escapeHtml($escaper->escapeJs($viewModel->getLeadTokenFro
 
                     fetch(this.options.addLeadUrl, {
                         method: "POST",
-                        body: JSON.stringify({
+                        body: this._serialize({
                             warranty: warranty,
                             leadToken: this.options.leadToken,
                             form_key: hyva.getFormKey()
                         }),
                         headers: {
-                            'Content-Type': 'application/json;charset=utf-8'
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
                         }
                     })
                     .then(response => {
@@ -102,11 +120,15 @@ $leadToken = $escaper->escapeHtml($escaper->escapeJs($viewModel->getLeadTokenFro
                 _onAddToCartSuccess: function(response) {
                     // track Extend 'Add To Cart'
                     if (this.options.trackingEnabled && typeof (response.trackingData) !== 'undefined') {
-                        const extendEvent = new CustomEvent('extend:trackOfferAddedToCart', {
+                        const extendEvent = new CustomEvent('extend:' + response.trackingData.eventName, {
                             detail: response.trackingData
                         });
                         window.dispatchEvent(extendEvent);
                     }
+
+                    // reload cart items
+                    const reloadCustomerDataEvent = new CustomEvent("reload-customer-section-data");
+                    window.dispatchEvent(reloadCustomerDataEvent);
                 },
 
                 /**

@@ -27,7 +27,14 @@ $isWarrantyItem = $productType === \Extend\Warranty\Model\Product\Type::TYPE_COD
 $leadToken = $_item->getLeadToken();
 ?>
 
-<?php if (!$isWarrantyItem && $viewModel->isOrderOffersEnabled() && $viewModel->isLeadEnabled() && isset($leadToken)): ?>
+<?php if (!$isWarrantyItem
+    && $viewModel->isOrderOffersEnabled()
+    && $viewModel->isLeadEnabled()
+    && isset($leadToken)): ?>
+    <?php $isWarrantyInLaterOrders = $viewModel->isWarrantyInLaterOrders($_item)?>
+    <?php if (!$isWarrantyInLaterOrders): ?>
+        <?php $isWarrantyInQuote = $viewModel->isWarrantyInQuote($_item->getSku()) ?>
+    <?php endif; ?>
     <script>
         function leadOrderWarranty_<?= $_item->getId() ?>() {
             return {
@@ -36,11 +43,12 @@ $leadToken = $_item->getLeadToken();
                     itemId: "<?= $escaper->escapeJs($_item->getId()) ?>",
                     productSku: "<?= $escaper->escapeJs($_item->getSku()) ?>",
                     qty: "<?= $escaper->escapeJs($_item->getQtyOrdered()) ?>",
-                    leadToken: "<?= $escaper->escapeJs(implode(", ", ($viewModel->unserialize($leadToken)))) ?>",
+                    leadToken: "<?= $escaper->escapeJs(implode(", ", $viewModel->unserialize($leadToken))) ?>",
                     addLeadUrl : "<?= $escaper->escapeUrl($block->getUrl('warranty/cart/addlead')) ?>",
                     buttonEnabled: true,
                     trackingEnabled: <?= $escaper->escapeJs($viewModel->isTrackingEnabled() ? 1 : 0) ?>,
-                    isWarrantyInQuoteForSku: <?= (int)$viewModel->isWarrantyInQuoteForSku($_item->getSku()) ?>
+                    isWarrantyInLaterOrders: <?= $escaper->escapeJs((int)$isWarrantyInLaterOrders) ?>,
+                    isWarrantyInQuote: <?= $escaper->escapeJs((int)$isWarrantyInQuote ?? 0) ?>
                 },
 
                 init () {
@@ -52,7 +60,7 @@ $leadToken = $_item->getLeadToken();
                 },
 
                 initWarranty () {
-                    if (!this.options.isWarrantyInQuoteForSku) {
+                    if (!this.options.isWarrantyInLaterOrders && !this.options.isWarrantyInQuote) {
                         this.renderSimpleButton();
                     }
                     this._addProductSku();
@@ -93,6 +101,24 @@ $leadToken = $_item->getLeadToken();
                 },
 
                 /**
+                 * Serialize fetch parameters
+                 * @private
+                 */
+                _serialize: function (obj, prefix) {
+                    let str = [];
+                    for (let p in obj) {
+                        if (obj.hasOwnProperty(p)) {
+                            const k = prefix ? prefix + '[' + p + ']' : p,
+                                v = obj[p];
+                            str.push(typeof v == 'object' ?
+                                this._serialize(v, k) :
+                                (encodeURIComponent(k) + '=' + encodeURIComponent(v)));
+                        }
+                    }
+                    return str.join('&');
+                },
+
+                /**
                  * Warranty "Add To Cart" handler
                  * @protected
                  * @param {Object|null} warranty - warranty plan data
@@ -106,14 +132,14 @@ $leadToken = $_item->getLeadToken();
 
                     fetch(this.options.addLeadUrl, {
                         method: "POST",
-                        body: JSON.stringify({
+                        body: this._serialize({
                             warranty: warranty,
                             qty: this.options.qty,
                             leadToken: this.options.leadToken,
                             form_key: hyva.getFormKey()
                         }),
                         headers: {
-                            'Content-Type': 'application/json;charset=utf-8'
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
                         }
                     })
                     .then(response => {
@@ -153,11 +179,15 @@ $leadToken = $_item->getLeadToken();
 
                     // track Extend 'Add To Cart'
                     if (this.options.trackingEnabled && typeof (response.trackingData) !== 'undefined') {
-                        const extendEvent = new CustomEvent('extend:trackOfferAddedToCart', {
+                        const extendEvent = new CustomEvent('extend:' + response.trackingData.eventName, {
                             detail: response.trackingData
                         });
                         window.dispatchEvent(extendEvent);
                     }
+
+                    // reload cart items
+                    const reloadCustomerDataEvent = new CustomEvent("reload-customer-section-data");
+                    window.dispatchEvent(reloadCustomerDataEvent);
                 },
 
                 /**
