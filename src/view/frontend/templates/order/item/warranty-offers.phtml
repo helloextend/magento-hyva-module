@@ -48,7 +48,7 @@ $leadToken = $_item->getLeadToken();
                     buttonEnabled: true,
                     trackingEnabled: <?= $escaper->escapeJs($viewModel->isTrackingEnabled() ? 1 : 0) ?>,
                     isWarrantyInLaterOrders: <?= $escaper->escapeJs((int)$isWarrantyInLaterOrders) ?>,
-                    isWarrantyInQuote: <?= $escaper->escapeJs((int)$isWarrantyInQuote ?? 0) ?>
+                    isWarrantyInQuote: <?= $escaper->escapeJs($isWarrantyInQuote ?? 0) ?>
                 },
 
                 init () {
